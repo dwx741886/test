@@ -121,8 +121,8 @@ args <- commandArgs(trailingOnly = TRUE)
 data_file <- args[1]  # 数据文件路径
 output_file <- args[2]  # 结果保存路径
 n_perm <- as.integer(args[3])  # 置换次数
-grid_points <- NULL  # 网格点（可以通过调整代码传递）
-num_cores <- 24  # 并行核心数
+grid_points <- as.integer(args[4])  # 网格点
+num_cores <- as.integer(args[5])  # 并行核心数
 
 # 运行置换检验
 run_permutation_test(data_file, n_perm, grid_points, num_cores, output_file)
