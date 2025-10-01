@@ -1,4 +1,5 @@
-# === 1. 加载必要的包 ===
+##使用Rscript permutation_test.R input_test.csv output_permutation.csv permutation_number
+##1. 加载必要的包 
 library(dplyr)
 library(pdp)
 library(fastshap)
@@ -7,7 +8,7 @@ library(caret)
 library(doParallel)
 library(foreach)
 
-# === 2. 定义主要函数: run_permutation_test ===
+##2. 定义主要函数: run_permutation_test 
 run_permutation_test <- function(data_file, n_perm = 1000, grid_points = NULL, num_cores = 7, output_file = "perm_results.csv") {
 
   # 读取数据
