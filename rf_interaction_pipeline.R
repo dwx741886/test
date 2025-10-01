@@ -96,7 +96,7 @@ run_pipeline <- function(data_file, out_dir = "results_out") {
   ggsave(file.path(out_dir,"interaction_plots.png"), p_int1 | p_int2 | p_int3, width=14, height=6, dpi=600)
 }
 
-# ========= 脚本执行入口 =========
+# 脚本执行入口
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args)<2) {
   cat("用法: Rscript rf_interaction_pipeline.R <data_file.csv> <output_dir>\n")
