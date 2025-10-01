@@ -1,0 +1,11 @@
+# 建模 + CV
+Rscript rf_master_pipeline.R rf_pipeline ALLdistanceHC9.csv results_out/
+
+# SHAP 分析
+Rscript rf_master_pipeline.R rf_shap ALLdistanceHC9.csv shap_out/
+
+# 交互作用分析
+Rscript rf_master_pipeline.R rf_interaction ALLdistanceHC9.csv inter_out/
+
+# 置换检验 (1000次, 网格点=10, 核心数=7, 输出文件 perm.csv)
+Rscript rf_master_pipeline.R permutation_test ALLdistanceHC9.csv perm_out/ 1000 10 7 perm.csv
