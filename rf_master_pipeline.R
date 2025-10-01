@@ -22,7 +22,7 @@ suppressPackageStartupMessages({
   library(foreach)
 })
 
-# ========= 1. rf_pipeline (建模 + 特征选择 + CV) =========
+##1. rf_pipeline (建模 + 特征选择 + CV) 
 run_rf_pipeline <- function(data_file, out_dir) {
   dir.create(out_dir, showWarnings = FALSE)
   
@@ -99,7 +99,7 @@ run_rf_pipeline <- function(data_file, out_dir) {
   ggsave(file.path(out_dir, "cv_r2_distribution.png"), p, width=6, height=4)
 }
 
-# ========= 2. rf_shap_pipeline (SHAP 分析) =========
+##2. rf_shap_pipeline (SHAP 分析) 
 run_rf_shap <- function(data_file, out_dir) {
   dir.create(out_dir, showWarnings = FALSE)
   detagene2 <- read.csv(data_file)
@@ -156,7 +156,7 @@ run_rf_shap <- function(data_file, out_dir) {
   ggsave(file.path(out_dir,"shap_summary.png"), p_final, width=12, height=8, dpi=600, bg="white")
 }
 
-# ========= 3. rf_interaction_pipeline (交互作用分析) =========
+##3. rf_interaction_pipeline (交互作用分析)
 run_rf_interaction <- function(data_file, out_dir) {
   dir.create(out_dir, showWarnings = FALSE)
   detagene2 <- read.csv(data_file)
@@ -178,7 +178,7 @@ run_rf_interaction <- function(data_file, out_dir) {
   write.csv(interaction_mc$results, file.path(out_dir,"interaction_results.csv"), row.names=FALSE)
 }
 
-# ========= 4. permutation_test (置换检验) =========
+## 4. permutation_test (置换检验) 
 run_permutation_test <- function(data_file, n_perm, grid_points, num_cores, output_file) {
   detagene2 <- read.csv(data_file)
   detagene2_scaled <- detagene2 %>% mutate(across(c(SSD, LSD, mC, Len), scale))
@@ -214,7 +214,7 @@ run_permutation_test <- function(data_file, n_perm, grid_points, num_cores, outp
   cat("置换检验结果已保存至:", output_file, "\n")
 }
 
-# ========= 主入口 =========
+##主入口 
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args)<3) {
   cat("用法: Rscript rf_master_pipeline.R <mode> <data_file.csv> <output_dir> [extra]\n")
