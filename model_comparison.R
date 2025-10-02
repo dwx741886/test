@@ -5,7 +5,8 @@
 # 功能:
 #   1. 支持多种机器学习模型 (RF, XGBoost, SVM, Elastic Net)
 #   2. 自动比较性能并生成可视化
-#   3. 允许用户自定义并行核数
+#   3. 允许用户自定义并行核数和输出图像格式 (pdf/png/svg)
+#   4. 自动检测 Cairo 支持，避免 PNG/SVG 报错
 # ===============================================
 
 suppressPackageStartupMessages({
@@ -18,11 +19,30 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(doParallel)
   library(parallel)
+  library(tidyr)
 })
 
+# --------- 辅助函数：检测 Cairo 是否可用 ---------
+is_cairo_available <- function() {
+  ok <- TRUE
+  tryCatch({
+    grDevices::cairoVersion()
+  }, error = function(e) {
+    ok <<- FALSE
+  })
+  return(ok)
+}
+
 # ---------------- 主函数 ----------------
-run_model_comparison <- function(data_file, out_dir = "model_comparison", n_cores = detectCores() - 1) {
+run_model_comparison <- function(data_file, out_dir = "model_comparison",
+                                 n_cores = detectCores() - 1, file_type = "pdf") {
   dir.create(out_dir, showWarnings = FALSE)
+
+  # 检查 Cairo 支持
+  if (file_type %in% c("png", "svg") && !is_cairo_available()) {
+    message("? Cairo not available, fallback to PDF.")
+    file_type <- "pdf"
+  }
 
   # ---------------- 数据预处理 ----------------
   detagene2 <- read.csv(data_file)
@@ -30,7 +50,7 @@ run_model_comparison <- function(data_file, out_dir = "model_comparison", n_core
   X1 <- detagene2_scaled[, c("SSD", "LSD", "mC", "Len", "Sub")]
   y1 <- detagene2_scaled$Gene_mutation
 
-  # Winsorize极端值
+  # Winsorize 极端值
   y_clean1 <- ifelse(y1 > quantile(y1, 0.99), quantile(y1, 0.99), y1)
   X_clean1 <- data.frame(
     SSD = as.numeric(X1$SSD),
@@ -138,7 +158,7 @@ run_model_comparison <- function(data_file, out_dir = "model_comparison", n_core
   write.csv(test_metrics, file.path(out_dir, "test_metrics_comparison.csv"), row.names = FALSE)
   saveRDS(models, file.path(out_dir, "trained_models.rds"))
 
-  create_comparison_plots(models, test_metrics, out_dir, data_test)
+  create_comparison_plots(models, test_metrics, out_dir, data_test, file_type)
 
   best_model <- test_metrics$Model[which.max(test_metrics$Rsquared)]
   cat("Best model:", best_model, "\n")
@@ -148,50 +168,55 @@ run_model_comparison <- function(data_file, out_dir = "model_comparison", n_core
 }
 
 # ---------------- 可视化函数 ----------------
-create_comparison_plots <- function(models, test_metrics, out_dir, data_test) {
+create_comparison_plots <- function(models, test_metrics, out_dir, data_test, file_type = "pdf") {
   cat("Generating visualization results...\n")
 
   results <- resamples(models)
-  results_df <- results$values
 
-  # 1. Cross-validation R2
-  p1 <- ggplot(results_df, aes(x = model, y = Rsquared)) +
-    geom_boxplot(aes(fill = model), alpha = 0.7) +
+  # 转换 cross-validation 结果为 tidy 格式
+  results_df <- as.data.frame(results$values)
+  results_df$Resample <- rownames(results_df)
+
+  results_long <- results_df %>%
+    pivot_longer(
+      cols = -Resample,
+      names_to = c("Model", "Metric"),
+      names_sep = "~",
+      values_to = "Value"
+    )
+
+  # ---------------- 绘图 ----------------
+  p1 <- results_long %>%
+    filter(Metric == "Rsquared") %>%
+    ggplot(aes(x = Model, y = Value)) +
+    geom_boxplot(aes(fill = Model), alpha = 0.7) +
     geom_jitter(width = 0.2, alpha = 0.5) +
     labs(title = "Cross-validation R2 Distribution", x = "Model", y = "R2") +
     theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          legend.position = "none")
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
-  # 2. Cross-validation RMSE
-  p2 <- ggplot(results_df, aes(x = model, y = RMSE)) +
-    geom_boxplot(aes(fill = model), alpha = 0.7) +
+  p2 <- results_long %>%
+    filter(Metric == "RMSE") %>%
+    ggplot(aes(x = Model, y = Value)) +
+    geom_boxplot(aes(fill = Model), alpha = 0.7) +
     geom_jitter(width = 0.2, alpha = 0.5) +
     labs(title = "Cross-validation RMSE Distribution", x = "Model", y = "RMSE") +
     theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          legend.position = "none")
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
-  # 3. Test set R2
   p3 <- ggplot(test_metrics, aes(x = reorder(Model, Rsquared), y = Rsquared, fill = Model)) +
     geom_col(alpha = 0.8) +
     geom_text(aes(label = round(Rsquared, 3)), vjust = -0.5) +
     labs(title = "Test Set R2 Comparison", x = "Model", y = "R2") +
     theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          legend.position = "none")
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
   model_comparison_plot <- (p1 + p2 + p3) + plot_layout(ncol = 3)
-  ggsave(file.path(out_dir, "model_comparison.png"), model_comparison_plot,
-         width = 15, height = 5, dpi = 300)
 
-  # Save summary table
-  performance_table <- test_metrics %>%
-    arrange(desc(Rsquared)) %>%
-    mutate(across(where(is.numeric), round, 4))
-  write.csv(performance_table, file.path(out_dir, "model_performance_summary.csv"), row.names = FALSE)
+  ggsave(file.path(out_dir, paste0("model_comparison.", file_type)),
+         model_comparison_plot, width = 15, height = 5, dpi = 300)
 
-  # Predicted vs Observed
+  # ----------- 保存预测散点图 -----------
   predictions_combined <- data.frame()
   for (model_name in names(models)) {
     pred <- predict(models[[model_name]], data_test)
@@ -210,7 +235,8 @@ create_comparison_plots <- function(models, test_metrics, out_dir, data_test) {
     labs(title = "Predicted vs Observed", x = "Observed", y = "Predicted") +
     theme_minimal()
 
-  ggsave(file.path(out_dir, "prediction_scatter.png"), p_scatter, width = 10, height = 8, dpi = 300)
+  ggsave(file.path(out_dir, paste0("prediction_scatter.", file_type)),
+         p_scatter, width = 10, height = 8, dpi = 300)
 
   cat("Visualization results saved to:", out_dir, "\n")
 }
@@ -218,10 +244,11 @@ create_comparison_plots <- function(models, test_metrics, out_dir, data_test) {
 # ---------------- 脚本入口 ----------------
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
-  cat("Usage: Rscript model_comparison.R <data_file.csv> [output_dir] [n_cores]\n")
+  cat("Usage: Rscript model_comparison.R <data_file.csv> [output_dir] [n_cores] [file_type]\n")
 } else {
   data_file <- args[1]
   out_dir <- ifelse(length(args) > 1, args[2], "model_comparison")
   n_cores <- ifelse(length(args) > 2, as.numeric(args[3]), detectCores() - 1)
-  run_model_comparison(data_file, out_dir, n_cores)
+  file_type <- ifelse(length(args) > 3, args[4], "pdf")
+  run_model_comparison(data_file, out_dir, n_cores, file_type)
 }
