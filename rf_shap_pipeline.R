@@ -1,4 +1,12 @@
 #!/usr/bin/env Rscript
+# ===============================================
+# 机器学习shap重要性分析脚本
+# 作者: 杜伟轩
+# 功能:
+#   1. 支持随机森林模型
+#   2. 支持shap解释模型
+#   3. 支持自动生成可视化
+# ===============================================
 ##使用Rscript rf_shap_pipeline.R ALLdistanceHC9.csv output_dir/
 suppressPackageStartupMessages({
   library(dplyr)
