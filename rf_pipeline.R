@@ -1,4 +1,12 @@
 #!/usr/bin/env Rscript
+# ===============================================
+# 机器学习验证分析脚本
+# 作者: 杜伟轩
+# 功能:
+#   1. 支持数据清洗、特征筛选
+#   2. 支持随机森林模型
+#   2. 10-fold、验证集验证
+# ===============================================
 ##使用Rscript rf_pipeline.R ALLdistanceHC9.csv results_out/
 ##  1. 加载必要包 
 suppressPackageStartupMessages({
