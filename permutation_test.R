@@ -1,3 +1,11 @@
+# ===============================================
+# 机器学习置换验证分析脚本
+# 作者: 杜伟轩
+# 功能:
+#   1. 支持随机森林模型
+#   2. 获取h_statistic
+#   3. 允许用户自定义并行核数、网格点、置换次数
+# ===============================================
 ##使用Rscript permutation_test.R input_test.csv output_permutation.csv permutation_number
 ##1. 加载必要的包 
 library(dplyr)
@@ -41,14 +49,14 @@ run_permutation_test <- function(data_file, n_perm = 1000, grid_points = NULL, n
   X_ver1 <- X_clean1[-train_idx, ]
   y_ver1 <- y_clean1[-train_idx]
   y_shift_ver1 <- y_ver1 + epsilon
-  data_ver1 <- data.frame(X_ver1, Gene_mutation = y_shift_ver1)
+  data_ver1 <- data.rame(X_ver1, Gene_mutation = y_shift_ver1)
   
   # 删除重复样本（若为技术重复）
   dup_idx <- duplicated(data_train1) | duplicated(data_train1, fromLast = TRUE)
   cat("重复样本数量:", sum(dup_idx), "/", nrow(data_train1))
   data_train1 <- data_train1 %>% distinct(SSD, LSD, mC, Len, Sub, Gene_mutation, .keep_all = TRUE)
 
-  # === 3. 随机森林建模 ===
+  # === 3.c建模 ===
   set.seed(123)
   rf_model <- ranger(
     formula = Gene_mutation ~ SSD + LSD + mC + Len + Sub,
