@@ -1,4 +1,12 @@
 #!/usr/bin/env Rscript
+# ===============================================
+# 机器学习单因素与多因素互作分析脚本
+# 作者: 杜伟轩
+# 功能:
+#   1. 支持随机森林模型
+#   2. 支持iml包解释模型
+#   3. 支持自动生成可视化
+# ===============================================
 ##使用Rscript rf_interaction_pipeline.R ALLdistanceHC9.csv output_dir/
 suppressPackageStartupMessages({
   library(dplyr)
